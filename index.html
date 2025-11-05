@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Daily Crossword — Template</title>
+<style>
+  :root{
+    --teal:#1f9dbf;
+    --gold:#f5b041;
+    --bg:#faf9f6;
+    --card:#ffffff;
+    --thin:#ddd;
+    --shade:#faf7f2;
+    --num:#999;
+  }
+  html,body{margin:0;padding:0;background:var(--bg);font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;display:flex;justify-content:center;}
+  .wrap{width:100%;max-width:980px;padding:12px;box-sizing:border-box}
+  .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+  .title{color:var(--teal);text-align:center;margin:0;font-size:clamp(1.1rem,3.5vw,1.6rem);font-weight:700}
+  .subtitle{color:#666;text-align:center;margin:6px 0 12px;font-style:italic}
+  .grid-wrap{display:flex;justify-content:center}
+  /* grid container */
+  .crossword{
+    display:grid;
+    grid-template-columns: repeat(15, 1fr);
+    gap:6px;
+    width: min(95vw, 720px);
+    max-width:720px;
+    box-sizing:border-box;
+    padding:8px;
+  }
+  /* each cell */
+  .cell{
+    position:relative;
+    aspect-ratio: 1 / 1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--card);
+    border:1px solid var(--thin);
+    box-sizing:border-box;
+    font-family:monospace;
+  }
+  .cell.shaded{ background: var(--shade); }
+  .cell.black{ background:#222; border-color:#222; }
+  /* numbering */
+  .num{
+    position:absolute; top:4px; left:4px; font-size:10px; color:var(--num);
+  }
+  /* input and given */
+  .cell input, .cell .given {
+    width:86%; height:86%; font-size:clamp(14px,3.2vw,20px); text-transform:uppercase;
+    text-align:center; border-radius:6px; border:1px solid #cfcfcf; box-sizing:border-box; font-weight:700;
+    background:transparent; font-family:monospace;
+  }
+  .cell .given{ pointer-events:none; background:rgba(242,247,247,0.95) }
+  .cell input:focus{ outline:none; border-color:var(--teal); background:#e8f8fb; }
+  /* controls and layout */
+  .controls{ display:flex; justify-content:center; gap:8px; margin-top:12px; }
+  button{ padding:8px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700 }
+  .btn-gold{ background:var(--gold); color:#222 }
+  .btn-teal{ background:var(--teal); color:#fff }
+  .clues{ margin-top:14px; display:flex; gap:18px; flex-direction:column }
+  @media(min-width:900px){ .clues{ flex-direction:row } }
+  .clue-col{ flex:1 }
+  .clue-col h4{ margin:0 0 6px 0; color:var(--teal) }
+  .clue{ margin:6px 0; color:#222 }
+  .clue small{ color:#666; margin-left:8px }
+  .footer-note{ margin-top:8px; text-align:center; color:#666; font-size:0.95rem }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1 class="title">Daily Crossword</h1>
+      <div class="subtitle">Sample Theme: Around the House</div>
+
+      <div class="grid-wrap">
+        <div id="grid" class="crossword" role="grid" aria-label="Crossword grid"></div>
+      </div>
+
+      <div class="controls" aria-hidden="false">
+        <button id="clearBtn" class="btn-gold">🔄 Clear My Answers</button>
+        <button id="fillDemo" class="btn-teal">Fill Demo Answers</button>
+      </div>
+
+      <div class="clues" aria-label="Crossword clues">
+        <div class="clue-col">
+          <h4>Across</h4>
+          <div class="clue"><strong>1.</strong> Cozy TV companion (4) <small>— SOFA</small></div>
+          <div class="clue"><strong>5.</strong> Light switch locale (4) <small>— WALL</small></div>
+          <div class="clue"><strong>7.</strong> Where the cook stirs things up (7) <small>— KITCHEN</small></div>
+        </div>
+
+        <div class="clue-col">
+          <h4>Down</h4>
+          <div class="clue"><strong>1.</strong> Bedroom furniture for rest (3) <small>— BED</small></div>
+          <div class="clue"><strong>2.</strong> Handle on a door (5) <small>— KNOB</small></div>
+          <div class="clue"><strong>3.</strong> Not dirty (5) <small>— CLEAN</small></div>
+        </div>
+      </div>
+
+      <div class="footer-note">Each number 1–9 must appear once per row, column, and box. Progress saves automatically.</div>
+    </div>
+  </div>
+
+<script>
+/*
+  15x15 grid template with placeholder words placed for demo.
+  '#' = black square
+  Letters in uppercase are given (preset for demo)
+  Empty strings "" are input cells the solver fills
+*/
+const template = [
+  // 15 columns each row
+  // Row 1
+  ["S","O","F","A","","#","#","#","#","#","#","#","","","", ""],
+  // Row 2
+  ["W","A","L","L","","#","#","#","#","#","#","#","","","", ""],
+  // Row 3
+  ["K","I","T","C","H","E","N","#","#","#","#","#","","","", ""],
+  // Row 4 (a few standalone blanks for down words)
+  ["","", "","", "","", "", "#", "", "", "", "", "", "", "", ""],
+  // Row 5
+  ["", "", "", "", "", "", "", "#", "", "", "", "", "", "", ""],
+  // Row 6: place KNOB vertically starting at r1c12? For simplicity place KNOB at col12 downward
+  ["", "", "", "", "", "", "", "#", "", "", "", "K", "", "", ""],
+  ["", "", "", "", "", "", "", "#", "", "", "", "N", "", "", ""],
+  ["", "", "", "", "", "", "", "#", "", "", "", "O", "", "", ""],
+  ["", "", "", "", "", "", "", "#", "", "", "", "B", "", "", ""],
+  // Row 10: CLEAN across somewhere (place at row10 col1)
+  ["C","L","E","A","N","","","","","","","","","","",""],
+  // Fill remaining rows with empty cells or blacks for spacing
+  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+];
+
+// Note: this demo places the Across demo answers (SOFA, WALL, KITCHEN) as givens
+// and places KNOB vertically in column 12 and CLEAN across row 10. They may not interlock in a fully polished cruciverbal way (this is a placeholder demo).
+// You can replace `template` with a real crossword fill (array of 15x15) for real puzzles.
+
+const gridEl = document.getElementById('grid');
+const STORAGE_KEY = 'crossword-15x15-progress-v1';
+const CLEAR_FLAG = 'crossword-15x15-cleared-v1';
+
+// create cells, numbering, and fill
+function buildGrid(){
+  gridEl.innerHTML = '';
+  const rows = template.length;
+  const cols = template[0].length;
+  // compute numbering: a cell that is not black and (on left is black or at left edge) OR (above is black or at top edge) gets a number
+  let num = 1;
+  const numbers = Array.from({length:rows}, ()=>Array(cols).fill(0));
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(template[r][c] === "#") continue;
+      const leftBlack = (c===0) || (template[r][c-1]==="#");
+      const topBlack = (r===0) || (template[r-1][c]==="#");
+      if(leftBlack || topBlack){
+        numbers[r][c] = num++;
+      }
+    }
+  }
+
+  // load saved if cookie not cleared
+  const isCleared = getCookie(CLEAR_FLAG) === "true";
+  let saved = {};
+  try { if(!isCleared) saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch(e){ saved = {}; }
+
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const val = template[r][c];
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      // shading pattern: alternate 3x3 boxes like Sudoku (for subtle shading)
+      const boxR = Math.floor(r/3), boxC = Math.floor(c/3);
+      if((boxR + boxC) % 2 === 0) cell.classList.add('shaded');
+
+      if(val === "#"){
+        cell.classList.add('black');
+        // black squares still occupy grid space but contain nothing
+      } else {
+        // numbering
+        if(numbers[r][c]){
+          const n = document.createElement('div');
+          n.className = 'num';
+          n.textContent = numbers[r][c];
+          cell.appendChild(n);
+        }
+        // if the template contains an uppercase letter, render as given; otherwise render input
+        if(typeof val === 'string' && val.length === 1 && val.match(/[A-Z]/)){
+          const g = document.createElement('div');
+          g.className = 'given';
+          g.textContent = val;
+          cell.appendChild(g);
+        } else {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.maxLength = 1;
+          input.autocomplete = 'off';
+          input.inputMode = 'latin';
+          // restore saved value if available
+          const key = `${r}-${c}`;
+          if(saved[key]) input.value = saved[key];
+          // save on input
+          input.addEventListener('input', (e)=>{
+            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,1);
+            if(e.target.value) saved[key] = e.target.value;
+            else delete saved[key];
+            try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); }catch(e){}
+            setCookie(CLEAR_FLAG, 'false', 7);
+          });
+          // paste guard
+          input.addEventListener('paste', (ev)=>{
+            ev.preventDefault();
+            const txt = (ev.clipboardData || window.clipboardData).getData('text') || '';
+            const ch = txt.replace(/[^A-Za-z]/g,'').slice(0,1).toUpperCase();
+            if(ch) { input.value = ch; input.dispatchEvent(new Event('input')); }
+          });
+          cell.appendChild(input);
+        }
+      }
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+// cookies
+function setCookie(name,value,days){
+  const d = new Date(); d.setTime(d.getTime() + (days*24*60*60*1000));
+  document.cookie = `${name}=${encodeURIComponent(value)};expires=${d.toUTCString()};path=/`;
+}
+function getCookie(name){
+  const match = document.cookie.match(new RegExp('(^|; )'+name+'=([^;]*)'));
+  return match ? decodeURIComponent(match[2]) : '';
+}
+
+// clear button behavior
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  // clear inputs
+  const inputs = gridEl.querySelectorAll('input');
+  inputs.forEach(i => i.value = '');
+  try{ localStorage.removeItem(STORAGE_KEY); } catch(e){}
+  setCookie(CLEAR_FLAG, 'true', 7);
+});
+
+// demo fill (pre-populate demo answers so you can preview)
+document.getElementById('fillDemo').addEventListener('click', ()=>{
+  // Fill known letters from template (the given cells are already filled). We'll also fill a few inputs for demo convenience:
+  // Put "BED" down starting at first open cell (find a vertical run length 3)
+  // For simplicity, fill some representative cells programmatically:
+  const toFill = {
+    "0-0": "S","0-1":"O","0-2":"F","0-3":"A",
+    "1-0":"W","1-1":"A","1-2":"L","1-3":"L",
+    "2-0":"K","2-1":"I","2-2":"T","2-3":"C","2-4":"H","2-5":"E","2-6":"N",
+    "9-0":"C","9-1":"L","9-2":"E","9-3":"A","9-4":"N",
+    "5-11":"K","6-11":"N","7-11":"O","8-11":"B"
+  };
+  const inputs = gridEl.querySelectorAll('.cell');
+  inputs.forEach((cell, idx) => {
+    const r = Math.floor(idx/15), c = idx % 15;
+    const key = `${r}-${c}`;
+    const el = cell.querySelector('input');
+    if(el && toFill[key]){
+      el.value = toFill[key];
+      el.dispatchEvent(new Event('input'));
+    }
+  });
+});
+
+// initial build
+buildGrid();
+</script>
+</body>
+</html>
