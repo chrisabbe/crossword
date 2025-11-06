@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Inbox Puzzles — Crossword Layout Mapper</title>
+<style>
+  :root{--teal:#1f9dbf;--gold:#f5b041;--bg:#faf9f6;--card:#fff;--thin:#ddd;--gold-shade:#faf1de;--num:#999}
+  html,body{margin:0;padding:0;background:var(--bg);font-family:Helvetica,Arial,sans-serif;display:flex;justify-content:center}
+  .wrap{width:100%;max-width:980px;padding:12px;box-sizing:border-box}
+  .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  h1{margin:0;color:var(--teal);font-size:clamp(1.1rem,4vw,1.5rem)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  .row label{font-weight:600;color:#333}
+  input[type=number],input[type=text],textarea,button,select{border:1px solid #ddd;border-radius:8px;padding:8px 10px;font-size:15px}
+  button{cursor:pointer;font-weight:700}
+  .btn{background:var(--gold);border:none}
+  .btn2{background:var(--teal);color:#fff;border:none}
+  .gridWrap{display:flex;justify-content:center;margin:10px 0}
+  .grid{display:grid;gap:6px;width:min(95vw,720px);max-width:720px;padding:8px;box-sizing:border-box}
+  .cell{aspect-ratio:1/1;border:1px solid var(--thin);background:#fff;position:relative;display:flex;align-items:center;justify-content:center}
+  .cell.block{background:var(--gold-shade)}
+  .num{position:absolute;top:3px;left:5px;font-size:10px;color:var(--num);user-select:none;pointer-events:none}
+  .given{position:absolute;inset:8%;display:flex;align-items:center;justify-content:center;border:1px solid #cfcfcf;border-radius:6px;background:rgba(242,247,247,.95);font-family:monospace;font-weight:700}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+  .legend{font-size:13px;color:#555}
+  .twoCol{display:flex;gap:12px;flex-wrap:wrap}
+  .col{flex:1;min-width:260px}
+  textarea{width:100%;height:160px;box-sizing:border-box}
+  .small{font-size:12px;color:#666}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Crossword Layout Mapper</h1>
+      <div class="row">
+        <label>Rows&nbsp;<input id="rows" type="number" min="3" max="25" value="15" style="width:80px"></label>
+        <label>Cols&nbsp;<input id="cols" type="number" min="3" max="25" value="15" style="width:80px"></label>
+        <button id="build" class="btn">Build / Resize Grid</button>
+        <span class="legend">Tap cells to toggle <b>Block</b>. Long-press to set a <b>Given Letter</b>. Double-tap to clear.</span>
+      </div>
+
+      <div class="gridWrap">
+        <div id="grid" class="grid" role="grid" aria-label="Crossword layout grid"></div>
+      </div>
+
+      <div class="controls">
+        <button id="clearAll" class="btn">Clear All</button>
+        <button id="invertBlocks" class="btn">Invert Blocks</button>
+        <button id="exportPuzzle" class="btn2">Export Interactive Puzzle HTML</button>
+      </div>
+      <div class="small">Title and subtitle will be “Daily Crossword” and your theme; you can edit them inside the exported HTML.</div>
+
+      <div class="twoCol" style="margin-top:10px">
+        <div class="col">
+          <h3 style="color:var(--teal);margin:0 0 6px">Across clues</h3>
+          <textarea id="across" placeholder="Format: number. clue (answer-length optional)
+1. Cozy TV companion (4)
+5. Light switch locale (4)
+..."></textarea>
+        </div>
+        <div class="col">
+          <h3 style="color:var(--teal);margin:0 0 6px">Down clues</h3>
+          <textarea id="down" placeholder="2. Not dirty (5)
+3. Where the cook stirs things up (7)
+..."></textarea>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <label>Theme / Subtitle&nbsp;<input id="subtitle" type="text" placeholder="Sample Theme: Around the House" style="min-width:240px;width:50%"></label>
+      </div>
+      <div class="small">Tip: Use your PDF as a visual reference. Set rows/cols to match the diagram, tap the same blocks, and add any printed givens via long-press.</div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const gridEl = document.getElementById('grid');
+  const rowsEl = document.getElementById('rows');
+  const colsEl = document.getElementById('cols');
+  const acrossEl = document.getElementById('across');
+  const downEl = document.getElementById('down');
+  const subtitleEl = document.getElementById('subtitle');
+
+  let ROWS = parseInt(rowsEl.value,10)||15;
+  let COLS = parseInt(colsEl.value,10)||15;
+  // template[r][c]: "#" = block; "" = empty input; "A".."Z" = given
+  let template = Array.from({length:ROWS},()=>Array(COLS).fill(""));
+
+  function rebuild(){
+    ROWS = Math.max(3, Math.min(25, parseInt(rowsEl.value,10)||15));
+    COLS = Math.max(3, Math.min(25, parseInt(colsEl.value,10)||15));
+    template = Array.from({length:ROWS},()=>Array(COLS).fill(""));
+    draw();
+  }
+
+  function draw(){
+    gridEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    gridEl.innerHTML = "";
+    const nums = computeNumbers(template, ROWS, COLS);
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        const cell = document.createElement('div');
+        const val = template[r][c];
+        cell.className = "cell";
+        if(val==="#"){ cell.classList.add("block"); }
+        // numbering
+        if(val!=="#" && nums[r][c]){
+          const n = document.createElement('div');
+          n.className = 'num';
+          n.textContent = nums[r][c];
+          cell.appendChild(n);
+        }
+        // given overlay
+        if(val && val!=="#"){
+          const g = document.createElement('div');
+          g.className = 'given';
+          g.textContent = val;
+          cell.appendChild(g);
+        }
+
+        // interactions
+        let longPressTimer = null;
+        cell.addEventListener('touchstart', (e)=>{
+          e.preventDefault();
+          longPressTimer = setTimeout(()=>{
+            setGiven(r,c);
+          }, 450);
+        }, {passive:false});
+        cell.addEventListener('touchend', ()=>{
+          if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; }
+        });
+
+        cell.addEventListener('mousedown', (e)=>{
+          // left click toggles block; right click sets given
+          if(e.button===2){ e.preventDefault(); setGiven(r,c); return; }
+        });
+        cell.addEventListener('click', ()=>{
+          toggleBlock(r,c);
+        });
+        cell.addEventListener('dblclick', ()=>{
+          clearCell(r,c);
+        });
+
+        cell.addEventListener('contextmenu', e=>e.preventDefault());
+
+        gridEl.appendChild(cell);
+      }
+    }
+  }
+
+  function toggleBlock(r,c){
+    const v = template[r][c];
+    if(v==="#"){ template[r][c]=""; }
+    else { template[r][c]="#"; }
+    draw();
+  }
+  function clearCell(r,c){
+    template[r][c]="";
+    draw();
+  }
+  function setGiven(r,c){
+    if(template[r][c]==="#"){ template[r][c] = ""; } // convert block to empty first
+    const ch = prompt("Given letter (A–Z):","").trim().toUpperCase().replace(/[^A-Z]/g,"").slice(0,1);
+    if(ch){ template[r][c]=ch; }
+    draw();
+  }
+
+  function computeNumbers(tpl, R, C){
+    const nums = Array.from({length:R}, ()=>Array(C).fill(0));
+    let count=1;
+    for(let r=0;r<R;r++){
+      for(let c=0;c<C;c++){
+        if(tpl[r][c]==="#") continue;
+        const leftBlock = (c===0) || (tpl[r][c-1]==="#");
+        const topBlock  = (r===0) || (tpl[r-1]?.[c]==="#");
+        if(leftBlock || topBlock){ nums[r][c]=count++; }
+      }
+    }
+    return nums;
+  }
+
+  function exportHTML(){
+    const subs = subtitleEl.value || "Sample Theme: Around the House";
+    const acrossTxt = acrossEl.value || "";
+    const downTxt = downEl.value || "";
+    const tplJSON = JSON.stringify(template);
+
+    const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Daily Crossword</title>
+<style>
+:root{--teal:#1f9dbf;--gold:#f5b041;--bg:#faf9f6;--card:#fff;--thin:#ddd;--gold-shade:#faf1de;--num:#999;--error:#ffcccc}
+html,body{margin:0;padding:0;background:var(--bg);font-family:Helvetica,Arial;display:flex;justify-content:center}
+.wrap{width:100%;max-width:980px;padding:18px;box-sizing:border-box;display:flex;justify-content:center}
+.card{width:100%;max-width:820px;background:var(--card);border-radius:12px;padding:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);box-sizing:border-box}
+.title{color:var(--teal);text-align:center;margin:0;font-size:clamp(1.05rem,3.6vw,1.6rem);font-weight:700}
+.subtitle{color:#666;text-align:center;margin:6px 0 6px;font-style:italic}
+.instructions{color:#666;text-align:center;margin:0 0 12px;font-size:0.95rem}
+.grid-wrap{display:flex;justify-content:center;margin:8px 0}
+.crossword{display:grid;gap:6px;width:min(95vw,720px);max-width:720px;padding:8px;box-sizing:border-box;grid-template-columns:repeat(${COLS},1fr)}
+.cell{aspect-ratio:1/1;border:1px solid var(--thin);background:#fff;position:relative;display:flex;align-items:center;justify-content:center;font-family:monospace}
+.cell.block{background:var(--gold-shade);border-color:var(--thin)}
+.num{position:absolute;top:3px;left:5px;font-size:10px;color:var(--num);user-select:none;pointer-events:none}
+.cell input,.cell .given{width:86%;height:86%;font-size:clamp(14px,3.2vw,20px);text-transform:uppercase;text-align:center;border-radius:6px;border:1px solid #cfcfcf;box-sizing:border-box;font-weight:700;background:transparent;font-family:monospace}
+.cell .given{pointer-events:none;background:rgba(242,247,247,.95)}
+.cell input:focus{outline:none;border-color:var(--teal);background:#e8f8fb}
+.cell input.conflict{background:var(--error)!important;border-color:#d00!important;color:#800}
+.cell .given.conflict{background:var(--error)!important;border:1px solid #d00!important;color:#800}
+.controls{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+button{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
+.btn-gold{background:var(--gold);color:#222}
+.clues{margin-top:14px;display:flex;gap:18px;flex-direction:column}
+@media(min-width:900px){.clues{flex-direction:row}}
+.clue-col{flex:1}
+.clue-col h4{margin:0 0 6px 0;color:var(--teal)}
+.clue{margin:6px 0;color:#222;white-space:pre-wrap}
+.footer-note{margin-top:12px;text-align:center;color:#666;font-size:.95rem}
+</style>
+</head><body>
+<div class="wrap"><div class="card" role="main" aria-labelledby="title">
+<h1 id="title" class="title">Daily Crossword</h1>
+<div class="subtitle">${escapeHtml(subs)}</div>
+<div class="instructions">Type letters into the boxes. Progress saves automatically.</div>
+<div class="grid-wrap"><div id="grid" class="crossword" role="grid" aria-label="Crossword grid"></div></div>
+<div class="controls"><button id="clearBtn" class="btn-gold">🔄 Clear My Answers</button></div>
+<div class="clues">
+  <div class="clue-col"><h4>Across</h4><div class="clue" id="acrossText">${escapeHtml(acrossTxt)}</div></div>
+  <div class="clue-col"><h4>Down</h4><div class="clue" id="downText">${escapeHtml(downTxt)}</div></div>
+</div>
+<div class="footer-note">Powered by Inbox Puzzles</div>
+</div></div>
+<script>
+const ROWS=${ROWS}, COLS=${COLS};
+const TEMPLATE=${tplJSON};
+const gridEl=document.getElementById('grid');
+const STORAGE_KEY='crossword-' + btoa(JSON.stringify({ROWS,COLS,TEMPLATE})).slice(0,16);
+const CLEAR_FLAG=STORAGE_KEY+'-cleared';
+function setCookie(n,v,d){const x=new Date();x.setTime(x.getTime()+d*24*60*60*1000);document.cookie=n+'='+encodeURIComponent(v)+';expires='+x.toUTCString()+';path=/'}
+function getCookie(n){const m=document.cookie.match(new RegExp('(^|; )'+n+'=([^;]*)'));return m?decodeURIComponent(m[2]):''}
+function computeNumbers(tpl){const nums=Array.from({length:ROWS},()=>Array(COLS).fill(0));let k=1;for(let r=0;r<ROWS;r++){for(let c=0;c<COLS;c++){if(tpl[r][c]==='#')continue;const lb=(c===0)||(tpl[r][c-1]==='#');const tb=(r===0)||(tpl[r-1]?.[c]==='#');if(lb||tb){nums[r][c]=k++;}}}return nums}
+function build(){gridEl.innerHTML='';gridEl.style.gridTemplateColumns='repeat('+COLS+',1fr)';const nums=computeNumbers(TEMPLATE);const isCleared=getCookie(CLEAR_FLAG)==='true';let saved={};try{if(!isCleared)saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}")}catch(e){saved={}}for(let r=0;r<ROWS;r++){for(let c=0;c<COLS;c++){const val=TEMPLATE[r][c];const cell=document.createElement('div');cell.className='cell';if(val==='#'){cell.classList.add('block')}else{if(nums[r][c]){const n=document.createElement('div');n.className='num';n.textContent=nums[r][c];cell.appendChild(n)}if(val&&val!=='#'){const g=document.createElement('div');g.className='given';g.textContent=val;cell.appendChild(g)}else{const inp=document.createElement('input');inp.type='text';inp.maxLength=1;inp.autocomplete='off';inp.inputMode='latin';const key=r+'-'+c;if(saved[key])inp.value=saved[key];inp.addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,1);if(e.target.value)saved[key]=e.target.value;else delete saved[key];try{localStorage.setItem(STORAGE_KEY,JSON.stringify(saved))}catch(_){}setCookie(CLEAR_FLAG,'false',7)});inp.addEventListener('paste',ev=>{ev.preventDefault();const t=(ev.clipboardData||window.clipboardData).getData('text')||'';const ch=t.replace(/[^A-Za-z]/g,'').slice(0,1).toUpperCase();if(ch){inp.value=ch;inp.dispatchEvent(new Event('input'))}});cell.appendChild(inp)}}gridEl.appendChild(cell)}}}
+document.getElementById('clearBtn').addEventListener('click',()=>{gridEl.querySelectorAll('input').forEach(i=>i.value='');try{localStorage.removeItem(STORAGE_KEY)}catch(e){}setCookie(CLEAR_FLAG,'true',7)});
+build();
+</script>
+</body></html>`;
+
+    downloadFile(html, "index.html");
+    alert("Exported! An 'index.html' has been downloaded. Upload it to a new GitHub repo to publish.");
+  }
+
+  function downloadFile(text, filename){
+    const blob = new Blob([text], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+
+  function invert(){
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        template[r][c] = (template[r][c]==="#") ? "" : "#";
+      }
+    }
+    draw();
+  }
+
+  // helpers available inside page
+  function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]))}
+
+  // wire up
+  document.getElementById('build').addEventListener('click', rebuild);
+  document.getElementById('clearAll').addEventListener('click', ()=>{ template = Array.from({length:ROWS},()=>Array(COLS).fill("")); draw(); });
+  document.getElementById('invertBlocks').addEventListener('click', invert);
+  document.getElementById('exportPuzzle').addEventListener('click', exportHTML);
+
+  // initial
+  rebuild();
+
+  // expose for HTML template export
+  window.escapeHtml = escapeHtml;
+})();
+</script>
+</body>
+</html>
