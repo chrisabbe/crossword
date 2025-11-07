@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Crossword Editor — Around the House</title>
+<meta name="description" content="Crossword Editor for numbering and layout adjustments.">
+<style>
+  :root{--teal:#1f9dbf;--gold:#f5b041;--bg:#faf9f6;--card:#fff;--thin:#ddd;--gold-shade:#faf1de;--num:#333;--num-stroke:#fff;}
+  html,body{margin:0;padding:0;background:var(--bg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;display:flex;justify-content:center;}
+  .wrap{width:100%;max-width:980px;padding:18px;display:flex;justify-content:center}
+  .card{width:100%;max-width:860px;background:var(--card);border-radius:12px;padding:16px;box-shadow:0 8px 20px rgba(0,0,0,.06)}
+  .title{color:var(--teal);text-align:center;margin:0;font-size:clamp(1.05rem,3.6vw,1.6rem);font-weight:700}
+  .subtitle{color:#333;text-align:center;margin:6px 0 2px;font-weight:600}
+  .instructions{color:#666;text-align:center;margin:0 0 12px;font-size:.95rem;font-style:italic}
+  .grid-wrap{display:flex;justify-content:center;margin:10px 0}
+  .crossword{display:grid;gap:6px;width:min(700px,95vw);padding:8px;grid-template-columns:repeat(15,1fr)}
+  .cell{position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:var(--card);
+    border:1px solid var(--thin);overflow:hidden;font-family:monospace}
+  .cell.block{background:var(--gold-shade)}
+  .num{position:absolute;top:4px;left:6px;font-size:16px;font-weight:800;color:var(--num);
+    text-shadow:-1px -1px 0 var(--num-stroke),1px -1px 0 var(--num-stroke),
+                -1px 1px 0 var(--num-stroke),1px 1px 0 var(--num-stroke);cursor:pointer;user-select:none}
+  .box{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    font-size:clamp(18px,3.5vw,28px);font-weight:700;font-family:monospace;text-transform:uppercase;
+    background:transparent;line-height:1;outline:none;caret-color:#222}
+  .box:focus{background:#e8f8fb}
+  .controls{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+  button{padding:10px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
+  .btn-gold{background:var(--gold);color:#222}
+  .btn-teal{background:var(--teal);color:#fff}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--teal);color:#fff;
+    padding:10px 14px;border-radius:10px;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.15);
+    opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;z-index:9999}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+<h1 class="title">Crossword Editor</h1>
+<div class="subtitle">Around the House</div>
+<div class="instructions">Tap a number to edit or remove it. Type letters to test layout. Progress auto-saves locally.</div>
+<div class="grid-wrap"><div id="grid" class="crossword"></div></div>
+<div class="controls">
+  <button id="clearBtn" class="btn-gold">🔄 Clear Letters</button>
+  <button id="resetBtn" class="btn-teal">♻️ Reset All Numbers</button>
+</div>
+</div></div>
+<div id="toast" class="toast">✅ Saved</div>
+
+<script>
+/* IMPORTANT: same PUZ_ID as index.html */
+const PUZ_ID='daily-xwd-fallback';
+const ANSWERS_KEY=PUZ_ID+':answers',NUMBERS_KEY=PUZ_ID+':numbers';
+
+function safeStore(){try{return window.localStorage}catch{return{getItem:()=>null,setItem:()=>{},removeItem:()=>{}}}}
+const store=safeStore();
+
+/* Same 15×15 with centered 13×6 */
+const ROWS=15,COLS=15,centerR0=1,centerC0=4;
+const test13x6=[["#","","#","#","#","#"],["#","","#","#","#","#"],["#","","#","","#","#"],["","","","","#","#"],["#","#","#","","#","#"],["#","#","#","","#","#"],["#","#","","","",""],["#","#","","#","#",""],["#","#","","#","#",""],["#","#","","#","#","#"],["#","#","","#","#","#"],["#","#","","#","#","#"],["#","#","","#","#","#"]];
+const TEMPLATE=Array.from({length:ROWS},()=>Array(COLS).fill("#"));
+for(let r=0;r<test13x6.length;r++)for(let c=0;c<test13x6[0].length;c++)TEMPLATE[centerR0+r][centerC0+c]=test13x6[r][c]==="#"?"#":"";
+
+/* Auto-numbering */
+function autoNumbers(){
+  const n=Array.from({length:ROWS},()=>Array(COLS).fill(0));let k=1;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(TEMPLATE[r][c]==="#")continue;
+    const L=c===0||TEMPLATE[r][c-1]==="#",T=r===0||TEMPLATE[r-1]?.[c]==="#";
+    if(L||T)n[r][c]=k++;
+  }
+  return n;
+}
+
+/* Load saves shared with index.html */
+let numbers;
+try{numbers=JSON.parse(store.getItem(NUMBERS_KEY)||'[]');}catch{numbers=[];}
+if(!Array.isArray(numbers)||numbers.length!==ROWS)numbers=autoNumbers();
+
+let saved={};
+try{saved=JSON.parse(store.getItem(ANSWERS_KEY)||'{}');}catch{}
+
+/* Helpers */
+function save(){try{store.setItem(ANSWERS_KEY,JSON.stringify(saved));}catch{}}
+function saveNums(){try{store.setItem(NUMBERS_KEY,JSON.stringify(numbers));}catch{}}
+
+const gridEl=document.getElementById('grid'),toastEl=document.getElementById('toast');
+function showToast(){toastEl.classList.add('show');setTimeout(()=>toastEl.classList.remove('show'),2000);}
+
+function buildGrid(){
+  gridEl.innerHTML='';
+  gridEl.style.gridTemplateColumns=`repeat(${COLS},1fr)`;
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const val=TEMPLATE[r][c];
+      const cell=document.createElement('div');cell.className='cell';
+      if(val==="#"){cell.classList.add('block');}
+      else{
+        /* Editable number */
+        const lab=numbers[r][c]||0;
+        if(lab){
+          const num=document.createElement('div');num.className='num';num.textContent=lab;
+          num.addEventListener('click',()=>{
+            const v=prompt('Set number (leave blank to remove):',String(numbers[r][c]||''));if(v===null)return;
+            const nv=v.trim();numbers[r][c]=nv===''?0:(isFinite(parseInt(nv,10))?parseInt(nv,10):numbers[r][c]);
+            saveNums();buildGrid();showToast();
+          });
+          cell.appendChild(num);
+        } else {
+          /* Add a number by double-tap/click */
+          cell.addEventListener('dblclick',()=>{
+            const nv=prompt('Add number:','');
+            if(nv && isFinite(parseInt(nv,10))){numbers[r][c]=parseInt(nv,10);saveNums();buildGrid();showToast();}
+          });
+        }
+
+        /* Letter box */
+        const box=document.createElement('div');box.className='box';box.contentEditable='true';
+        const key=r+'-'+c;if(saved[key])box.textContent=saved[key];
+        box.addEventListener('input',()=>{
+          let t=(box.textContent||'').toUpperCase().replace(/[^A-Z]/g,'');if(t.length>1)t=t.slice(-1);
+          box.textContent=t;if(t)saved[key]=t;else delete saved[key];
+          save();showToast();
+        });
+        cell.appendChild(box);
+      }
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+document.getElementById('clearBtn').addEventListener('click',()=>{gridEl.querySelectorAll('.box').forEach(b=>b.textContent='');saved={};save();showToast();});
+document.getElementById('resetBtn').addEventListener('click',()=>{numbers=autoNumbers();saveNums();buildGrid();showToast();});
+
+buildGrid();
+</script>
+</body>
+</html>
