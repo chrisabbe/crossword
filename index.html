@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Daily Crossword — Around the House</title>
+<style>
+  :root{
+    --teal:#1f9dbf;--gold:#f5b041;--bg:#faf9f6;--card:#fff;
+    --thin:#ddd;--gold-shade:#faf1de;--num:#333;--num-stroke:#fff;
+  }
+  html,body{margin:0;padding:0;background:var(--bg);
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    display:flex;justify-content:center;-webkit-font-smoothing:antialiased;}
+  .wrap{width:100%;max-width:980px;padding:18px;display:flex;justify-content:center}
+  .card{width:100%;max-width:860px;background:var(--card);border-radius:12px;
+    padding:16px;box-shadow:0 8px 20px rgba(0,0,0,.06)}
+  .title{color:var(--teal);text-align:center;margin:0;
+    font-size:clamp(1.05rem,3.6vw,1.6rem);font-weight:700}
+  .subtitle{color:#333;text-align:center;margin:6px 0 2px;font-weight:600}
+  .instructions{color:#666;text-align:center;margin:0 0 12px;
+    font-size:.95rem;font-style:italic}
+
+  .grid-wrap{display:flex;justify-content:center;margin:10px 0}
+  .crossword{display:grid;gap:6px;width:min(700px,95vw);
+    padding:8px;grid-template-columns:repeat(15,1fr)}
+  .cell{position:relative;aspect-ratio:1/1;display:flex;
+    align-items:center;justify-content:center;background:var(--card);
+    border:1px solid var(--thin);overflow:hidden;font-family:monospace}
+  .cell.block{background:var(--gold-shade)}
+
+  .num{position:absolute;top:2px;left:3px;
+    font-size:clamp(9px,1.6vw,13px);font-weight:800;color:var(--num);
+    text-shadow:-1px -1px 0 var(--num-stroke),1px -1px 0 var(--num-stroke),
+                -1px 1px 0 var(--num-stroke),1px 1px 0 var(--num-stroke);
+    pointer-events:none;user-select:none}
+  .box{width:100%;height:100%;display:flex;align-items:center;
+    justify-content:center;font-size:clamp(18px,3.5vw,28px);
+    font-weight:700;font-family:monospace;text-transform:uppercase;
+    background:transparent;line-height:1;outline:none;caret-color:#222}
+  .box:focus{background:#e8f8fb}
+
+  .controls{display:flex;justify-content:center;gap:10px;
+    margin-top:12px;flex-wrap:wrap}
+  button{padding:10px 14px;border-radius:8px;border:none;
+    cursor:pointer;font-weight:700}
+  .btn-gold{background:var(--gold);color:#222}
+  #importBtn{display:none;} /* hidden but callable */
+
+  .clues{margin-top:16px;display:flex;gap:18px;flex-direction:column}
+  @media(min-width:900px){.clues{flex-direction:row}}
+  .clue-col{flex:1}
+  .clue-col h4{margin:0 0 6px 0;color:var(--teal)}
+  .clue{margin:6px 0;color:#222;white-space:pre-wrap;line-height:1.4}
+
+  .toast{position:fixed;left:50%;bottom:18px;
+    transform:translateX(-50%);background:var(--teal);color:#fff;
+    padding:10px 14px;border-radius:10px;font-weight:700;
+    box-shadow:0 8px 18px rgba(0,0,0,.15);opacity:0;pointer-events:none;
+    transition:opacity .25s ease,transform .25s ease;z-index:9999}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+<h1 class="title">Daily Crossword</h1>
+<div class="subtitle">Around the House</div>
+<div class="instructions">Type letters into the boxes. Progress saves automatically.</div>
+
+<div class="grid-wrap"><div id="grid" class="crossword"></div></div>
+
+<div class="controls">
+  <button id="importBtn" class="btn-gold">📥 Import Puzzle Data</button>
+  <button id="clearBtn" class="btn-gold">🔄 Clear My Answers</button>
+</div>
+
+<div class="clues">
+  <div class="clue-col"><h4>Across</h4>
+    <div class="clue">3. Light switch locale<br>4. Handle on a door</div>
+  </div>
+  <div class="clue-col"><h4>Down</h4>
+    <div class="clue">1. Cozy TV companion<br>2. Not dirty<br>4. Where the cook stirs things up<br>5. Bedroom furniture for rest</div>
+  </div>
+</div></div></div>
+<div id="toast" class="toast">✅ Progress saved</div>
+
+<!-- Hidden iframe for same-origin storage -->
+<iframe id="storeFrame" src="storage.html" style="display:none;"></iframe>
+
+<script>
+const PUZ_ID='daily-xwd-fallback';
+const ANSWERS_KEY=PUZ_ID+':answers',NUMBERS_KEY=PUZ_ID+':numbers';
+let saved={},numbers=[],storeReady=false;
+
+/* communication with storage.html */
+window.addEventListener('message',e=>{
+  if(!e.data)return;
+  const {cmd,key,value}=e.data;
+  if(cmd==='ready'){storeReady=true;loadAll();}
+  if(cmd==='return'){
+    if(key===ANSWERS_KEY){try{saved=JSON.parse(value||'{}');}catch{saved={};}}
+    if(key===NUMBERS_KEY){try{numbers=JSON.parse(value||'[]');}catch{numbers=[];}}
+    buildGrid();
+  }
+});
+
+function post(msg){const f=document.getElementById('storeFrame');if(f&&f.contentWindow)f.contentWindow.postMessage(msg,'*');}
+function saveObj(k,obj){post({cmd:'save',key:k,value:JSON.stringify(obj)});}
+function loadObj(k){post({cmd:'load',key:k});}
+function loadAll(){loadObj(ANSWERS_KEY);loadObj(NUMBERS_KEY);}
+
+/* base puzzle */
+const ROWS=15,COLS=15,centerR0=1,centerC0=4;
+const test13x6=[["#","","#","#","#","#"],["#","","#","#","#","#"],["#","","#","","#","#"],["","","","","#","#"],
+["#","#","#","","#","#"],["#","#","#","","#","#"],["#","#","","","",""],["#","#","","#","#",""],
+["#","#","","#","#",""],["#","#","","#","#","#"],["#","#","","#","#","#"],["#","#","","#","#","#"],
+["#","#","","#","#","#"]];
+const TEMPLATE=Array.from({length:ROWS},()=>Array(COLS).fill("#"));
+for(let r=0;r<test13x6.length;r++)for(let c=0;c<test13x6[0].length;c++)
+  TEMPLATE[centerR0+r][centerC0+c]=test13x6[r][c]==="#"?"#":"";
+
+function autoNumbers(){
+  const n=Array.from({length:ROWS},()=>Array(COLS).fill(0));let k=1;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(TEMPLATE[r][c]==="#")continue;
+    const L=c===0||TEMPLATE[r][c-1]==="#",T=r===0||TEMPLATE[r-1]?.[c]==="#";
+    if(L||T)n[r][c]=k++;
+  }return n;
+}
+
+/* toast */
+const toastEl=document.getElementById('toast');
+function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');
+  setTimeout(()=>toastEl.classList.remove('show'),1200);}
+
+/* build grid */
+const gridEl=document.getElementById('grid');
+function buildGrid(){
+  if(!Array.isArray(numbers)||numbers.length!==ROWS)numbers=autoNumbers();
+  gridEl.innerHTML='';
+  gridEl.style.gridTemplateColumns=`repeat(${COLS},1fr)`;
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const val=TEMPLATE[r][c];
+    const cell=document.createElement('div');cell.className='cell';
+    if(val==="#"){cell.classList.add('block');gridEl.appendChild(cell);continue;}
+    const lab=numbers[r][c];if(lab){const num=document.createElement('div');num.className='num';num.textContent=lab;cell.appendChild(num);}
+    const box=document.createElement('div');box.className='box';box.contentEditable='true';
+    const key=r+'-'+c;if(saved[key])box.textContent=saved[key];
+    box.oninput=()=>{
+      let t=(box.textContent||'').toUpperCase().replace(/[^A-Z]/g,'');
+      if(t.length>1)t=t.slice(-1);box.textContent=t;
+      if(t)saved[key]=t;else delete saved[key];
+      saveObj(ANSWERS_KEY,saved);
+      toast('✅ Progress saved');
+    };
+    cell.appendChild(box);gridEl.appendChild(cell);
+  }
+}
+
+/* clear answers */
+document.getElementById('clearBtn').onclick=()=>{
+  gridEl.querySelectorAll('.box').forEach(b=>b.textContent='');
+  saved={};saveObj(ANSWERS_KEY,saved);toast('Cleared');
+};
+
+/* hidden import */
+document.getElementById('importBtn').onclick=()=>{
+  const code=prompt("Paste encoded puzzle data:");if(!code)return;
+  try{
+    const d=JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+    if(d.numbers)numbers=d.numbers;if(d.answers)saved=d.answers;
+    saveObj(NUMBERS_KEY,numbers);saveObj(ANSWERS_KEY,saved);buildGrid();toast('Imported');
+  }catch{alert('Invalid data');}
+};
+
+/* load data if passed in URL */
+const qs=new URLSearchParams(window.location.search);
+if(qs.has('data')){
+  try{
+    const d=JSON.parse(decodeURIComponent(escape(atob(qs.get('data')))));
+    if(d.numbers)numbers=d.numbers;if(d.answers)saved=d.answers;
+    saveObj(NUMBERS_KEY,numbers);saveObj(ANSWERS_KEY,saved);
+  }catch{}
+}
+buildGrid();
+</script>
+</body>
+</html>
