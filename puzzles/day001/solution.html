@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crossword Solution</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #fafafa;
+        margin: 0;
+        padding: 0;
+        color: #222;
+    }
+
+    .header {
+        background: #008080;
+        color: white;
+        text-align: center;
+        padding: 20px 10px;
+        font-size: 26px;
+        font-weight: bold;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #444;
+        font-style: italic;
+        margin-top: 8px;
+        margin-bottom: 15px;
+        font-size: 15px;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: auto;
+        padding: 10px;
+    }
+
+    .grid-wrapper {
+        display: flex;
+        justify-content: center;
+        overflow-x: auto;
+    }
+
+    table.solution {
+        border-collapse: collapse;
+    }
+
+    table.solution td {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #777;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 20px;
+        font-weight: bold;
+        color: #005f5f; /* teal solution letters */
+        text-transform: uppercase;
+    }
+
+    /* Gold blocks */
+    td.block {
+        background: #d8c178;
+        color: transparent;
+    }
+
+    /* Scaling for phones */
+    @media (max-width: 600px) {
+        table.solution td {
+            width: 26px;
+            height: 26px;
+            font-size: 18px;
+        }
+    }
+    @media (max-width: 420px) {
+        table.solution td {
+            width: 22px;
+            height: 22px;
+            font-size: 16px;
+        }
+    }
+</style>
+
+</head>
+
+<body>
+
+<div class="header">DAILY CROSSWORD — SOLUTION</div>
+<div class="subtitle">Completed grid for yesterday’s puzzle.</div>
+
+<div class="container">
+    <div id="solutionArea"></div>
+</div>
+
+<script>
+fetch("puzzle.json")
+    .then(r => r.json())
+    .then(data => buildSolution(data));
+
+function buildSolution(puz) {
+    const wrap = document.createElement("div");
+    wrap.className = "grid-wrapper";
+
+    const tbl = document.createElement("table");
+    tbl.className = "solution";
+
+    for (let r = 0; r < puz.rows; r++) {
+        const row = document.createElement("tr");
+
+        for (let c = 0; c < puz.cols; c++) {
+            const cell = document.createElement("td");
+
+            if (puz.solution[r][c] === "#") {
+                cell.classList.add("block");
+            } else {
+                cell.textContent = puz.solution[r][c].toUpperCase();
+            }
+
+            row.appendChild(cell);
+        }
+
+        tbl.appendChild(row);
+    }
+
+    wrap.appendChild(tbl);
+    document.getElementById("solutionArea").appendChild(wrap);
+}
+</script>
+
+</body>
+</html>
