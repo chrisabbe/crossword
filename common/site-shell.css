@@ -1,1 +1,132 @@
+:root{
+  --teal:#008080;
+  --teal-dark:#006a6a;
+  --gold:#d8c178;
+  --bg:#ffe066;      /* yellow background */
+  --panel:#ffffff;
+  --ink:#1e1e1e;
+  --muted:#6b6b6b;
+  --line:#ddd;
+}
 
+/* ===== BASE ===== */
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  color:var(--ink);
+}
+
+/* ===== HEADER ===== */
+.site-header{
+  background:#ffffff;
+  border-bottom:2px solid #e3e3e3;
+  padding:12px 14px;
+}
+
+.header-inner{
+  max-width:980px;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.brand img.logo{
+  height:60px;          /* bigger logo */
+  width:auto;
+}
+
+.brand .title-wrap h1{
+  margin:0;
+  font-size:22px;
+  font-weight:800;
+}
+
+.brand .title-wrap .tagline{
+  font-size:14px;
+  color:#444;
+  margin-top:3px;
+}
+
+.nav-links a{
+  color:#006a6a;
+  font-weight:700;
+  text-decoration:none;
+  font-size:14px;
+}
+
+/* ===== PAGE WRAP ===== */
+.page{
+  max-width:980px;
+  margin:0 auto;
+  padding:14px;
+}
+
+/* This panel holds your puzzle content */
+.page-panel{
+  background:var(--panel);
+  border:1px solid #e1e1e1;
+  border-radius:14px;
+  padding:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+
+/* ===== FOOTER ===== */
+.site-footer{
+  margin-top:30px;
+  padding:16px 0;
+  border-top:2px solid #e3e3e3;
+  background:#ffffff;
+}
+
+.footer-inner{
+  max-width:980px;
+  margin:0 auto;
+  padding:0 14px;
+  font-size:13px;
+  color:#555;
+}
+
+.footer-links{
+  margin-top:6px;
+  display:flex;
+  gap:14px;
+}
+
+.footer-links a{
+  color:#006a6a;
+  text-decoration:none;
+  font-weight:700;
+}
+
+@media(max-width:600px){
+  .header-inner{
+    flex-direction:column;
+    text-align:center;
+  }
+}
+/* ==== Restore site header text (override engine styles) ==== */
+
+.site-header h1 {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: #1e1e1e !important;
+  margin: 0;
+}
+
+.site-header .tagline {
+  font-size: 14px !important;
+  color: #444 !important;
+}
+
+.site-header {
+  background: #ffffff;
+}
