@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Crossword</title>
+
+<style>
+  body{
+    font-family: Arial, sans-serif;
+    margin:0; padding:0;
+    background:#fafafa; color:#222;
+  }
+  .header{
+    background:#008080; color:#fff;
+    padding:18px 10px; text-align:center;
+    font-size:26px; font-weight:700;
+  }
+  .subtitle{
+    text-align:center; color:#555; font-style:italic;
+    margin:6px 0 6px; font-size:15px;
+  }
+  .instructions{
+    text-align:center; color:#777; font-style:italic;
+    margin:0 0 10px; font-size:12.5px;
+  }
+  .container{ max-width:900px; margin:auto; padding:10px; }
+
+  .hintbar{
+    display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
+    margin:6px 0 12px;
+  }
+  .hintbtn{
+    background:#fff; color:#008080;
+    border:1px solid #008080; border-radius:8px;
+    padding:8px 12px; font-size:14px; font-weight:700;
+  }
+  .hintbtn:active{ transform:translateY(1px); }
+
+  .grid-wrapper{ display:flex; justify-content:center; overflow-x:auto; }
+  table.crossword{ border-collapse:collapse; margin-bottom:18px; user-select:none; }
+  table.crossword td{
+    width:32px; height:32px; border:1px solid #999;
+    padding:0; text-align:center; vertical-align:middle;
+    position:relative; font-size:20px; font-weight:700; background:#fff;
+  }
+  @media (max-width:600px){
+    table.crossword td{ width:26px; height:26px; font-size:17px; }
+  }
+  @media (max-width:420px){
+    table.crossword td{ width:22px; height:22px; font-size:15px; }
+  }
+
+  /* Gold blocks (compat with older class names) */
+  td.block, td.gold, td.blk, td.cell-block{
+    background:#d8c178 !important;
+  }
+
+  .num{
+    position:absolute; top:1px; left:2px;
+    font-size:10px; color:#222; font-weight:700;
+  }
+
+  td input{
+    width:100%; height:100%; text-transform:uppercase;
+    font-size:inherit; border:none; outline:none;
+    text-align:center; background:transparent; font-weight:700;
+  }
+
+  /* Active highlights */
+  td.active-word{ background:#ffe9a8; }
+  td.block.active-word{ background:#d8c178 !important; }
+  td.active-cell{
+    outline:2px solid #008080; outline-offset:-1px;
+  }
+
+  /* Check/incorrect styling */
+  td.wrong{
+    background:#ffd6d6 !important;
+  }
+  td.wrong input{
+    color:#b00000;
+  }
+
+  .clues{ margin-top:10px; }
+  .clues h3{ margin:10px 0 4px; color:#008080; }
+  .clue-list{ font-size:16px; line-height:1.6; }
+  .clue-item{
+    padding:2px 4px; border-radius:3px; cursor:pointer;
+  }
+  .clue-item.active-clue{
+    background:rgba(0,128,128,0.12); font-weight:700;
+  }
+
+  .clear-wrapper{ text-align:center; padding:16px 0 24px; }
+  .clear-btn{
+    background:#008080; color:#fff; border:none;
+    padding:12px 20px; border-radius:8px;
+    font-size:17px; font-weight:700;
+  }
+</style>
+</head>
+
+<body>
+  <!-- These are now dynamic -->
+  <div id="titleEl" class="header">DAILY CROSSWORD</div>
+  <div id="subtitleEl" class="subtitle"></div>
+  <div class="instructions">
+    Type letters into the boxes. Progress saves automatically. Tap a clue to highlight its word.
+  </div>
+
+  <div class="container">
+    <div class="hintbar">
+      <button class="hintbtn" onclick="checkWord()">Check Word</button>
+      <button class="hintbtn" onclick="revealLetter()">Reveal Letter</button>
+      <button class="hintbtn" onclick="revealWord()">Reveal Word</button>
+    </div>
+
+    <div id="puzzleArea"></div>
+
+    <div class="clues">
+      <h3>Across</h3>
+      <div id="across"></div>
+
+      <h3>Down</h3>
+      <div id="down"></div>
+    </div>
+
+    <div class="clear-wrapper">
+      <button class="clear-btn" onclick="clearGrid()">Clear My Answers</button>
+    </div>
+  </div>
+
+<script>
+const LS_KEY = "crossword-progress";
+
+let puzzleData=null;
+let cellMap=[], acrossMap={}, downMap={};
+let activeDirection=null, activeClueNum=null, activeCells=[], activeIndex=0;
+
+fetch("puzzle.json")
+  .then(r=>r.json())
+  .then(data=>{
+    puzzleData=data;
+
+    // ✅ NEW: set page title + subtitle from JSON
+    const titleText = (data.title || "Daily Crossword").toUpperCase();
+    document.getElementById("titleEl").textContent = titleText;
+    document.title = titleText;
+
+    const subtitleText = data.subtitle || "";
+    document.getElementById("subtitleEl").textContent = subtitleText;
+
+    buildPuzzle(data);
+  })
+  .catch(err=>{
+    console.error(err);
+    document.getElementById("puzzleArea").innerHTML =
+      "<div style='text-align:center;color:#b00000;font-weight:bold;margin-top:30px;'>Crossword Unavailable</div>";
+  });
+
+function buildPuzzle(puz){
+  cellMap=[]; acrossMap={}; downMap={};
+
+  const wrap=document.createElement("div");
+  wrap.className="grid-wrapper";
+
+  const tbl=document.createElement("table");
+  tbl.className="crossword";
+
+  const saved=JSON.parse(localStorage.getItem(LS_KEY)||"{}");
+
+  for(let r=0;r<puz.rows;r++){
+    cellMap[r]=[];
+    const tr=document.createElement("tr");
+
+    for(let c=0;c<puz.cols;c++){
+      const td=document.createElement("td");
+      const obj={td,input:null,acrossNum:null,downNum:null};
+      cellMap[r][c]=obj;
+
+      if(puz.grid[r][c]==="#"){
+        td.classList.add("block");
+      }else{
+        const inp=document.createElement("input");
+        inp.maxLength=1;
+        inp.dataset.row=r; inp.dataset.col=c;
+        inp.dataset.prev="";
+
+        const k=r+"-"+c;
+        if(saved[k]){
+          inp.value=saved[k];
+          inp.dataset.prev=saved[k];
+        }
+
+        inp.addEventListener("input", handleInput);
+        inp.addEventListener("keydown", handleKeyNav);
+        inp.addEventListener("focus", ()=>onCellFocus(r,c));
+
+        td.appendChild(inp);
+        obj.input=inp;
+      }
+
+      if(puz.numbers[r][c]>0){
+        const n=document.createElement("div");
+        n.className="num";
+        n.textContent=puz.numbers[r][c];
+        td.appendChild(n);
+      }
+
+      td.addEventListener("click", ()=>{
+        if(!cellMap[r][c].input) return;
+        onCellFocus(r,c,true);
+      });
+
+      tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+
+  wrap.appendChild(tbl);
+  document.getElementById("puzzleArea").innerHTML="";
+  document.getElementById("puzzleArea").appendChild(wrap);
+
+  computeWordMaps(puz);
+  buildClues(puz);
+}
+
+function computeWordMaps(puz){
+  const {rows, cols, grid, numbers:nums}=puz;
+
+  // across starts
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(grid[r][c]==="#") continue;
+      const startsAcross=(c===0||grid[r][c-1]==="#")&&(c+1<cols&&grid[r][c+1]!=="#");
+      if(startsAcross && nums[r][c]>0){
+        const clueNum=nums[r][c];
+        let cc=c;
+        while(cc<cols && grid[r][cc]!=="#"){
+          cellMap[r][cc].acrossNum=clueNum;
+          cc++;
+        }
+      }
+    }
+  }
+
+  // down starts
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(grid[r][c]==="#") continue;
+      const startsDown=(r===0||grid[r-1][c]==="#")&&(r+1<rows&&grid[r+1][c]!=="#");
+      if(startsDown && nums[r][c]>0){
+        const clueNum=nums[r][c];
+        let rr=r;
+        while(rr<rows && grid[rr][c]!=="#"){
+          cellMap[rr][c].downNum=clueNum;
+          rr++;
+        }
+      }
+    }
+  }
+
+  acrossMap={}; downMap={};
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const obj=cellMap[r][c];
+      const td=obj.td, inp=obj.input;
+
+      if(obj.acrossNum!=null){
+        const n=obj.acrossNum;
+        td.dataset.across=n;
+        if(inp) inp.dataset.across=n;
+        (acrossMap[n]??=([])).push({r,c,td,input:inp});
+      }
+      if(obj.downNum!=null){
+        const n=obj.downNum;
+        td.dataset.down=n;
+        if(inp) inp.dataset.down=n;
+        (downMap[n]??=([])).push({r,c,td,input:inp});
+      }
+    }
+  }
+}
+
+function buildClues(p){
+  const acrossDiv=document.getElementById("across");
+  const downDiv=document.getElementById("down");
+  acrossDiv.innerHTML=""; downDiv.innerHTML="";
+
+  const acrossNums=Object.keys(p.across||{}).map(n=>+n).sort((a,b)=>a-b);
+  for(const n of acrossNums){
+    const div=document.createElement("div");
+    div.className="clue-list clue-item";
+    div.dataset.clueType="across";
+    div.dataset.clueNumber=n;
+    div.innerHTML=`<b>${n}</b>. ${p.across[n]}`;
+    div.addEventListener("click",()=>activateWord("across",n,true));
+    acrossDiv.appendChild(div);
+  }
+
+  const downNums=Object.keys(p.down||{}).map(n=>+n).sort((a,b)=>a-b);
+  for(const n of downNums){
+    const div=document.createElement("div");
+    div.className="clue-list clue-item";
+    div.dataset.clueType="down";
+    div.dataset.clueNumber=n;
+    div.innerHTML=`<b>${n}</b>. ${p.down[n]}`;
+    div.addEventListener("click",()=>activateWord("down",n,true));
+    downDiv.appendChild(div);
+  }
+}
+
+function activateWord(direction, clueNum, focusFirst){
+  clearHighlights();
+
+  activeDirection=direction;
+  activeClueNum=clueNum;
+  activeCells=(direction==="across"?acrossMap:downMap)[clueNum]?.slice()||[];
+  activeIndex=0;
+
+  activeCells.forEach(c=>c.td.classList.add("active-word"));
+
+  document.querySelectorAll(".clue-item").forEach(el=>el.classList.remove("active-clue"));
+  const clueEl=document.querySelector(`.clue-item[data-clue-type="${direction}"][data-clue-number="${clueNum}"]`);
+  if(clueEl) clueEl.classList.add("active-clue");
+
+  if(focusFirst && activeCells.length){
+    let idx=0;
+    for(let i=0;i<activeCells.length;i++){
+      if(activeCells[i].input?.value===""){ idx=i; break; }
+    }
+    activeIndex=idx;
+    focusActiveCell();
+  }
+}
+
+function clearHighlights(){
+  document.querySelectorAll("td").forEach(td=>{
+    td.classList.remove("active-word","active-cell","wrong");
+  });
+  document.querySelectorAll(".clue-item").forEach(el=>el.classList.remove("active-clue"));
+}
+
+function onCellFocus(r,c){
+  const obj=cellMap[r][c];
+  if(!obj?.input) return;
+
+  // stay locked if cell belongs to active clue in active direction
+  if(activeDirection && activeClueNum!=null){
+    if(
+      (activeDirection==="across" && obj.acrossNum===activeClueNum) ||
+      (activeDirection==="down" && obj.downNum===activeClueNum)
+    ){
+      for(let i=0;i<activeCells.length;i++){
+        if(activeCells[i].r===r && activeCells[i].c===c){
+          activeIndex=i; focusActiveCell(); return;
+        }
+      }
+    }
+  }
+
+  // otherwise pick direction (prefer current dir if possible)
+  let dir=null, num=null;
+  if(activeDirection==="across" && obj.acrossNum!=null){ dir="across"; num=obj.acrossNum; }
+  else if(activeDirection==="down" && obj.downNum!=null){ dir="down"; num=obj.downNum; }
+  else if(obj.acrossNum!=null){ dir="across"; num=obj.acrossNum; }
+  else if(obj.downNum!=null){ dir="down"; num=obj.downNum; }
+
+  if(!dir||!num) return;
+
+  activateWord(dir,num,false);
+  for(let i=0;i<activeCells.length;i++){
+    if(activeCells[i].r===r && activeCells[i].c===c){ activeIndex=i; break; }
+  }
+  focusActiveCell();
+}
+
+function focusActiveCell(){
+  document.querySelectorAll("td").forEach(td=>td.classList.remove("active-cell"));
+  if(!activeCells.length) return;
+  const cell=activeCells[activeIndex];
+  if(!cell?.input) return;
+  cell.td.classList.add("active-cell");
+  cell.input.focus(); cell.input.select();
+}
+
+function moveToNextEmptyCell(){
+  for(let i=activeIndex+1;i<activeCells.length;i++){
+    const cell=activeCells[i];
+    if(cell.input && cell.input.value===""){
+      activeIndex=i; focusActiveCell(); return;
+    }
+  }
+  focusActiveCell();
+}
+
+function moveToPrevCell(){
+  if(activeIndex>0) activeIndex--;
+  focusActiveCell();
+}
+
+function handleInput(e){
+  const input=e.target;
+  const r=+input.dataset.row, c=+input.dataset.col;
+
+  let prev=input.dataset.prev||"";
+  let val=input.value.toUpperCase();
+  if(val.length>1) val=val.slice(-1);
+
+  if(!activeCells.some(x=>x.r===r && x.c===c)){
+    onCellFocus(r,c);
+  }
+
+  if(/^[A-Z]$/.test(val)){
+    input.value=val;
+    input.dataset.prev=val;
+    saveProgress();
+    clearWrongOnWord();
+    moveToNextEmptyCell();
+  }else if(val==="" && prev!==""){
+    input.dataset.prev="";
+    saveProgress();
+    clearWrongOnWord();
+    moveToPrevCell();
+  }else{
+    input.value="";
+    input.dataset.prev="";
+    saveProgress();
+  }
+}
+
+function handleKeyNav(e){
+  if(!activeCells.length) return;
+  const k=e.key;
+  if(k==="ArrowRight"){ e.preventDefault(); activeDirection="across"; if(activeIndex<activeCells.length-1) activeIndex++; focusActiveCell(); }
+  if(k==="ArrowLeft"){ e.preventDefault(); activeDirection="across"; if(activeIndex>0) activeIndex--; focusActiveCell(); }
+  if(k==="ArrowDown"){ e.preventDefault(); activeDirection="down"; if(activeIndex<activeCells.length-1) activeIndex++; focusActiveCell(); }
+  if(k==="ArrowUp"){ e.preventDefault(); activeDirection="down"; if(activeIndex>0) activeIndex--; focusActiveCell(); }
+}
+
+/* ---------- HINT / CHECK FEATURES ---------- */
+
+function solutionAt(r,c){
+  if(!puzzleData?.solution) return null;
+  const s=puzzleData.solution[r][c];
+  if(s==="#" ) return "#";
+  return (s||"").toUpperCase();
+}
+
+function clearWrongOnWord(){
+  activeCells.forEach(cell=>cell.td.classList.remove("wrong"));
+}
+
+function checkWord(){
+  if(!activeCells.length) return;
+  if(!puzzleData?.solution){
+    alert("No solution data found in this puzzle.json.");
+    return;
+  }
+
+  let anyWrong=false;
+  activeCells.forEach(cell=>{
+    const sol=solutionAt(cell.r, cell.c);
+    if(sol==="#" ) return;
+
+    const v=(cell.input?.value||"").toUpperCase();
+    if(v==="" ){
+      cell.td.classList.remove("wrong");
+      return;
+    }
+    if(v!==sol){
+      cell.td.classList.add("wrong");
+      anyWrong=true;
+    }else{
+      cell.td.classList.remove("wrong");
+    }
+  });
+
+  if(!anyWrong){
+    // no popup needed; keeps experience clean
+  }
+}
+
+function revealLetter(){
+  if(!activeCells.length) return;
+  if(!puzzleData?.solution){
+    alert("No solution data found in this puzzle.json.");
+    return;
+  }
+
+  const cell=activeCells[activeIndex];
+  const sol=solutionAt(cell.r, cell.c);
+  if(!sol || sol==="#" ) return;
+
+  if(cell.input){
+    cell.input.value=sol;
+    cell.input.dataset.prev=sol;
+    cell.td.classList.remove("wrong");
+    saveProgress();
+    moveToNextEmptyCell();
+  }
+}
+
+function revealWord(){
+  if(!activeCells.length) return;
+  if(!puzzleData?.solution){
+    alert("No solution data found in this puzzle.json.");
+    return;
+  }
+
+  activeCells.forEach(cell=>{
+    const sol=solutionAt(cell.r, cell.c);
+    if(!sol || sol==="#" ) return;
+    if(cell.input){
+      cell.input.value=sol;
+      cell.input.dataset.prev=sol;
+      cell.td.classList.remove("wrong");
+    }
+  });
+
+  saveProgress();
+  moveToNextEmptyCell();
+}
+
+/* ---------- SAVE / CLEAR ---------- */
+
+function saveProgress(){
+  const inputs=document.querySelectorAll("td input");
+  const out={};
+  inputs.forEach(inp=>{
+    const td=inp.parentElement, tr=td.parentElement;
+    const r=tr.rowIndex, c=td.cellIndex;
+    if(inp.value.trim()!=="") out[r+"-"+c]=inp.value.toUpperCase();
+  });
+  localStorage.setItem(LS_KEY, JSON.stringify(out));
+}
+
+function clearGrid(){
+  localStorage.removeItem(LS_KEY);
+  document.querySelectorAll("td input").forEach(i=>{
+    i.value=""; i.dataset.prev="";
+  });
+  clearHighlights();
+}
+</script>
+</body>
+</html>
