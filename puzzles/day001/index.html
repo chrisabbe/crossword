@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Crossword</title>
+
+<!-- Shared site shell -->
+<link rel="stylesheet" href="../../../common/site-shell.css">
+
+<!-- Crossword engine CSS -->
+<link rel="stylesheet" href="../../../engine/crossword.css">
+</head>
+
+<body>
+
+  <!-- Injected site header -->
+  <div id="site-header"></div>
+
+  <!-- Puzzle title (set dynamically by engine) -->
+  <div id="titleEl" class="puzzle-title">DAILY CROSSWORD</div>
+  <div id="subtitleEl" class="subtitle"></div>
+
+  <div class="instructions">
+    Type letters into the boxes. Progress saves automatically. Tap a clue to highlight its word.
+  </div>
+
+  <div class="container">
+    <div class="hintbar">
+      <button class="hintbtn" onclick="checkWord()">Check Word</button>
+      <button class="hintbtn" onclick="revealLetter()">Reveal Letter</button>
+      <button class="hintbtn" onclick="revealWord()">Reveal Word</button>
+    </div>
+
+    <!-- Crossword grid injected here -->
+    <div id="puzzleArea"></div>
+
+    <div class="clues">
+      <h3>Across</h3>
+      <div id="across"></div>
+
+      <h3>Down</h3>
+      <div id="down"></div>
+    </div>
+
+    <div class="clear-wrapper">
+      <button class="clear-btn" onclick="clearGrid()">Clear My Answers</button>
+    </div>
+  </div>
+
+  <!-- Injected site footer -->
+  <div id="site-footer"></div>
+
+  <!-- INLINE PARTIAL LOADER (no external dependency) -->
+  <script>
+    function loadPartial(targetId, url) {
+      fetch(url)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+          }
+          return response.text();
+        })
+        .then(html => {
+          const el = document.getElementById(targetId);
+          if (el) el.innerHTML = html;
+        })
+        .catch(err => {
+          console.error("Failed to load partial:", url, err);
+        });
+    }
+
+    loadPartial("site-header", "../../../common/header.html");
+    loadPartial("site-footer", "../../../common/footer.html");
+  </script>
+
+  <!-- Crossword engine -->
+  <script src="../../../engine/crossword.js"></script>
+
+</body>
+</html>
