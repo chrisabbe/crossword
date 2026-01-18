@@ -1,6 +1,14 @@
 /* ===============================
    Inbox Puzzles – Crossword CSS
    =============================== */
+.puzzle-title{
+  background:#008080;
+  color:#fff;
+  padding:18px 10px;
+  text-align:center;
+  font-size:26px;
+  font-weight:700;
+}
 
 .grid-wrapper{
   display:flex;
