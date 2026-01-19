@@ -9,6 +9,21 @@
   font-size:26px;
   font-weight:700;
 }
+.subtitle{
+  text-align:center;
+  color:#555;
+  font-style:italic;
+  margin:6px 0 6px;
+  font-size:15px;
+}
+
+.instructions{
+  text-align:center;
+  color:#777;
+  font-style:italic;
+  margin:0 0 12px;
+  font-size:12.5px;
+}
 
 .grid-wrapper{
   display:flex;
