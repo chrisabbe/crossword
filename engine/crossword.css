@@ -122,10 +122,14 @@ td input{
   user-select:none;
   -webkit-user-select:none;
   -webkit-touch-callout:none;
+  -webkit-appearance:none;
+  appearance:none;
 }
 
 td.active-cell input{
   caret-color:#008080;
+  user-select:text;
+  -webkit-user-select:text;
 }
 
 /* Active highlights */
