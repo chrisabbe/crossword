@@ -16,6 +16,8 @@ let activeDirection = null;
 let activeClueNum = null;
 let activeCells = [];
 let activeIndex = 0;
+let lastTapCell = { r: null, c: null };
+
 
 function showFatal(msg, err) {
   const area = document.getElementById("puzzleArea");
