@@ -146,10 +146,17 @@ function buildPuzzle(puz) {
 
         // ✅ iOS-stable tap handler: toggle direction on repeated taps
         td.addEventListener("pointerdown", (e) => {
-          // prevent iOS selection/paste UI + stabilizes second-tap toggles
-          e.preventDefault();
-          onCellTap(r, c);
-        });
+  e.preventDefault(); // suppress iOS paste/selection UI
+
+  onCellTap(r, c);
+
+  // 🔑 REQUIRED: focus input synchronously so iOS shows keyboard
+  const cell = cellMap[r][c];
+  if (cell?.input) {
+    cell.input.focus({ preventScroll: true });
+  }
+});
+
 
         tr.appendChild(td);
       }
