@@ -128,6 +128,8 @@ td input{
 
 td.active-cell input{
   caret-color:#008080;
+  user-select:text;
+  -webkit-user-select:text;
 }
 
 /* Active highlights */
