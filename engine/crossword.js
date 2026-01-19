@@ -499,8 +499,4 @@ function saveProgress() {
   localStorage.setItem(LS_KEY, JSON.stringify(out));
 }
 
-function clearHighlights() {
-  document.querySelectorAll("td").forEach(td => {
-    td.classList.remove("active-word", "active-cell", "wrong");
-  });
-}
+
