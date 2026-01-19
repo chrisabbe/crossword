@@ -284,11 +284,25 @@ function onCellFocus(r, c) {
   const obj = cellMap?.[r]?.[c];
   if (!obj?.input) return;
 
+  const hasAcross = obj.acrossNum != null;
+  const hasDown = obj.downNum != null;
+
   let dir = activeDirection;
 
-  if (dir === "across" && obj.acrossNum == null) dir = "down";
-  if (dir === "down" && obj.downNum == null) dir = "across";
-  if (!dir) dir = obj.acrossNum != null ? "across" : "down";
+  // 🔁 TOGGLE if tapping same cell again and both directions exist
+  if (
+    lastTapCell.r === r &&
+    lastTapCell.c === c &&
+    hasAcross &&
+    hasDown
+  ) {
+    dir = activeDirection === "across" ? "down" : "across";
+  } else {
+    // Normal direction selection
+    if (dir === "across" && !hasAcross) dir = "down";
+    if (dir === "down" && !hasDown) dir = "across";
+    if (!dir) dir = hasAcross ? "across" : "down";
+  }
 
   const num = dir === "across" ? obj.acrossNum : obj.downNum;
   if (num == null) return;
@@ -299,7 +313,11 @@ function onCellFocus(r, c) {
   if (idx >= 0) activeIndex = idx;
 
   focusActiveCell();
+
+  // remember tap
+  lastTapCell = { r, c };
 }
+
 
 
 /* ---------- INPUT ---------- */
