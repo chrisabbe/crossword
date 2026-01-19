@@ -359,10 +359,29 @@ function moveNext() {
 /* (Your HTML calls these; define them so you don't get ReferenceErrors.) */
 
 function clearGrid() {
+  // Clear saved progress
   localStorage.removeItem(LS_KEY);
-  document.querySelectorAll("td input").forEach(inp => inp.value = "");
+
+  // Clear grid letters
+  document.querySelectorAll("td input").forEach(inp => {
+    inp.value = "";
+  });
+
+  // Clear grid highlights
   clearHighlights();
+
+  // Clear clue highlights
+  document.querySelectorAll(".clue-item").forEach(el =>
+    el.classList.remove("active-clue")
+  );
+
+  // 🔹 RESET ENGINE STATE (this was missing)
+  activeDirection = null;
+  activeClueNum = null;
+  activeCells = [];
+  activeIndex = 0;
 }
+
 
 function checkWord() { /* optional later */ }
 function revealLetter() { /* optional later */ }
