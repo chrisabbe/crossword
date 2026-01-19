@@ -392,9 +392,52 @@ function clearGrid() {
 }
 
 
-function checkWord() { /* optional later */ }
-function revealLetter() { /* optional later */ }
-function revealWord() { /* optional later */ }
+function checkWord() {
+  if (!activeCells.length || !puzzleData?.solution) return;
+
+  clearWrongOnActiveWord();
+
+  activeCells.forEach(cell => {
+    const sol = solutionAt(cell.r, cell.c);
+    if (!sol) return;
+
+    const val = (cell.input?.value || "").toUpperCase();
+    if (val && val !== sol) {
+      cell.td.classList.add("wrong");
+    }
+  });
+}
+
+function revealLetter() {
+  if (!activeCells.length || !puzzleData?.solution) return;
+
+  const cell = activeCells[activeIndex];
+  if (!cell?.input) return;
+
+  const sol = solutionAt(cell.r, cell.c);
+  if (!sol) return;
+
+  cell.input.value = sol;
+  cell.td.classList.remove("wrong");
+  saveProgress();
+
+  moveNext();
+}
+
+function revealWord() {
+  if (!activeCells.length || !puzzleData?.solution) return;
+
+  activeCells.forEach(cell => {
+    const sol = solutionAt(cell.r, cell.c);
+    if (!sol || !cell.input) return;
+
+    cell.input.value = sol;
+    cell.td.classList.remove("wrong");
+  });
+
+  saveProgress();
+}
+
 
 /* ---------- SAVE / HIGHLIGHTS ---------- */
 
