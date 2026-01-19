@@ -222,13 +222,16 @@ d.onclick = () => activateWord("across", n, true);
   });
 
   Object.keys(p.clues.down).map(Number).sort((a, b) => a - b).forEach(n => {
-    const d = document.createElement("div");
-d.className = "clue-item";
-d.textContent = `${n}. ${p.clues.down[String(n)]}`;
-d.onclick = () => activateWord("down", n, true);
+  const d = document.createElement("div");
+  d.className = "clue-item";
+  d.dataset.dir = "down";
+  d.dataset.num = n;
+  d.textContent = `${n}. ${p.clues.down[String(n)]}`;
+  d.onclick = () => activateWord("down", n, true);
 
-    downDiv.appendChild(d);
-  });
+  downDiv.appendChild(d);
+});
+
 }
 
 /* ---------- NAVIGATION ---------- */
