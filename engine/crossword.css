@@ -176,3 +176,19 @@ td.wrong input{
   background:rgba(0,128,128,0.12);
   font-weight:700;
 }
+
+.clear-wrapper{
+  text-align:center;
+  padding:18px 0 28px;
+}
+
+.clear-btn{
+  background:#008080;
+  color:#fff;
+  border:none;
+  padding:14px 22px;
+  border-radius:10px;
+  font-size:17px;
+  font-weight:700;
+}
+
