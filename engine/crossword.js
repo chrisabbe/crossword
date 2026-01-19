@@ -231,20 +231,36 @@ function buildClues(p) {
 
 function activateWord(dir, num, focus) {
   clearHighlights();
+
   activeDirection = dir;
   activeClueNum = num;
   activeCells = (dir === "across" ? acrossMap : downMap)[num] || [];
   activeIndex = 0;
 
+  // highlight grid cells
   activeCells.forEach(c => c.td.classList.add("active-word"));
+
+  // 🔹 NEW: highlight the active clue
+  document.querySelectorAll(".clue-item").forEach(el =>
+    el.classList.remove("active-clue")
+  );
+
+  const clueEl = document.querySelector(
+    `.clue-item[data-dir="${dir}"][data-num="${num}"]`
+  );
+  if (clueEl) clueEl.classList.add("active-clue");
 
   if (focus) {
     for (let i = 0; i < activeCells.length; i++) {
-      if ((activeCells[i].input?.value || "") === "") { activeIndex = i; break; }
+      if ((activeCells[i].input?.value || "") === "") {
+        activeIndex = i;
+        break;
+      }
     }
     focusActiveCell();
   }
 }
+
 
 function focusActiveCell() {
   document.querySelectorAll("td").forEach(td => td.classList.remove("active-cell"));
