@@ -137,6 +137,13 @@ td.active-word{
   background:#ffe9a8;
 }
 
+/* Make active word win over active cell */
+td.active-word.active-cell{
+  background:#ffe9a8;
+  outline:2px solid #008080;
+}
+
+
 td.block.active-word{
   background:#d8c178 !important;
 }
