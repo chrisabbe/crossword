@@ -354,6 +354,15 @@ function moveNext() {
     }
   }
 }
+function solutionAt(r, c) {
+  const s = puzzleData?.solution?.[r]?.[c];
+  if (!s || s === "#") return null;
+  return s.toUpperCase();
+}
+
+function clearWrongOnActiveWord() {
+  activeCells.forEach(cell => cell.td.classList.remove("wrong"));
+}
 
 /* ---------- REQUIRED GLOBAL BUTTON HANDLERS ---------- */
 /* (Your HTML calls these; define them so you don't get ReferenceErrors.) */
