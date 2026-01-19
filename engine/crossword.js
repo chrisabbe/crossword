@@ -212,17 +212,21 @@ function buildClues(p) {
 
   Object.keys(p.clues.across).map(Number).sort((a, b) => a - b).forEach(n => {
     const d = document.createElement("div");
-    d.className = "clue-item";
-    d.textContent = `${n}. ${p.clues.across[String(n)]}`;
-    d.onclick = () => activateWord("across", n, true);
+d.className = "clue-item";
+d.dataset.dir = "across";
+d.dataset.num = n;
+d.textContent = `${n}. ${p.clues.across[String(n)]}`;
+d.onclick = () => activateWord("across", n, true);
+
     acrossDiv.appendChild(d);
   });
 
   Object.keys(p.clues.down).map(Number).sort((a, b) => a - b).forEach(n => {
     const d = document.createElement("div");
-    d.className = "clue-item";
-    d.textContent = `${n}. ${p.clues.down[String(n)]}`;
-    d.onclick = () => activateWord("down", n, true);
+d.className = "clue-item";
+d.textContent = `${n}. ${p.clues.down[String(n)]}`;
+d.onclick = () => activateWord("down", n, true);
+
     downDiv.appendChild(d);
   });
 }
