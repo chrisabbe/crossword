@@ -288,17 +288,17 @@ function activateWord(dir, num, focus) {
 }
 
 function focusActiveCell() {
-  document.querySelectorAll("td").forEach(td => td.classList.remove("active-cell"));
+  document.querySelectorAll("td").forEach(td =>
+    td.classList.remove("active-cell")
+  );
+
   const cell = activeCells[activeIndex];
   if (cell?.input) {
     cell.td.classList.add("active-cell");
-
-    // Delay focus slightly for iOS stability
-    requestAnimationFrame(() => {
-      cell.input.focus();
-    });
+    cell.input.focus({ preventScroll: true });
   }
 }
+
 
 // iOS-stable tap handler: toggles direction only on repeated taps of the same cell
 function onCellTap(r, c) {
