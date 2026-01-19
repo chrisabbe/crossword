@@ -259,17 +259,23 @@ function onCellFocus(r, c) {
   const obj = cellMap?.[r]?.[c];
   if (!obj?.input) return;
 
-  // prefer across if available
-  const dir = obj.acrossNum != null ? "across" : (obj.downNum != null ? "down" : null);
-  if (!dir) return;
+  let dir = activeDirection;
+
+  if (dir === "across" && obj.acrossNum == null) dir = "down";
+  if (dir === "down" && obj.downNum == null) dir = "across";
+  if (!dir) dir = obj.acrossNum != null ? "across" : "down";
 
   const num = dir === "across" ? obj.acrossNum : obj.downNum;
+  if (num == null) return;
+
   activateWord(dir, num, false);
 
   const idx = activeCells.findIndex(x => x.r === r && x.c === c);
   if (idx >= 0) activeIndex = idx;
+
   focusActiveCell();
 }
+
 
 /* ---------- INPUT ---------- */
 
