@@ -327,7 +327,7 @@ function onCellTap(r, c) {
   const num = dir === "across" ? obj.acrossNum : obj.downNum;
   if (num == null) return;
 
-  activateWord(dir, num, false);
+  activateWord(dir, num, true);
 
   const idx = activeCells.findIndex(x => x.r === r && x.c === c);
   if (idx >= 0) activeIndex = idx;
