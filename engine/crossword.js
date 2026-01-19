@@ -160,16 +160,7 @@ function buildPuzzle(puz) {
           onCellTap(r, c);
 
           // show keyboard reliably (must be synchronous with gesture)
-          const cell = cellMap[r]?.[c];
-          if (cell?.input) {
-            suppressFocusHandler = true;
-            try {
-              cell.input.focus({ preventScroll: true });
-            } finally {
-              // release on next tick
-              setTimeout(() => { suppressFocusHandler = false; }, 0);
-            }
-          }
+          
         });
 
         tr.appendChild(td);
@@ -296,18 +287,26 @@ function activateWord(dir, num, focus) {
 }
 
 function focusActiveCell() {
-  document.querySelectorAll("td").forEach(td => td.classList.remove("active-cell"));
+  document.querySelectorAll("td").forEach(td =>
+    td.classList.remove("active-cell")
+  );
+
   const cell = activeCells[activeIndex];
-  if (cell?.input) {
-    cell.td.classList.add("active-cell");
-    // focus is handled by pointerdown for iOS; but keep for desktop
+  if (!cell?.input) return;
+
+  cell.td.classList.add("active-cell");
+
+  // Delay focus to avoid iOS selection bubble
+  requestAnimationFrame(() => {
     suppressFocusHandler = true;
     try {
       cell.input.focus({ preventScroll: true });
     } finally {
       setTimeout(() => { suppressFocusHandler = false; }, 0);
     }
-  }
+  });
+}
+
 }
 
 function onCellTap(r, c) {
