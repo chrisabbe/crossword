@@ -24,6 +24,29 @@
   margin:0 0 12px;
   font-size:12.5px;
 }
+.hintbar{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:10px 0 16px;
+}
+
+.hintbtn{
+  background:#fff;
+  color:#008080;
+  border:2px solid #008080;
+  border-radius:10px;
+  padding:10px 16px;
+  font-size:15px;
+  font-weight:700;
+  min-width:120px;
+}
+
+.hintbtn:active{
+  transform:translateY(1px);
+}
 
 .grid-wrapper{
   display:flex;
