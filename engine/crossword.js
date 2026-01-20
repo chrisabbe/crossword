@@ -486,4 +486,4 @@ function clearHighlights() {
  document.querySelectorAll("td").forEach(td => {
    td.classList.remove("active-word", "wrong");
  });
-} Sent from my iPad
+
