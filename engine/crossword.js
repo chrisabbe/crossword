@@ -152,10 +152,10 @@ function buildPuzzle(puz) {
         }
 
         // iOS-stable tap handler
-        td.addEventListener("pointerdown", (e) => {
-          e.preventDefault();
-          onCellTap(r, c);
-        });
+        td.addEventListener("click", () => {
+  onCellTap(r, c);
+});
+
 
         tr.appendChild(td);
       }
@@ -289,14 +289,6 @@ function focusActiveCell() {
   cell.td.classList.add("active-cell");
 
   // Delay focus to reduce iOS selection/paste UI
-  requestAnimationFrame(() => {
-    suppressFocusHandler = true;
-    try {
-      cell.input.focus({ preventScroll: true });
-    } finally {
-      setTimeout(() => { suppressFocusHandler = false; }, 0);
-    }
-  });
 }
 
 function onCellTap(r, c) {
@@ -308,8 +300,13 @@ function onCellTap(r, c) {
 
   let dir = activeDirection;
 
-  // toggle only if same cell and both directions exist
-  if (lastTapCell.r === r && lastTapCell.c === c && hasAcross && hasDown) {
+  // Toggle only if same cell tapped again AND both directions exist
+  if (
+    lastTapCell.r === r &&
+    lastTapCell.c === c &&
+    hasAcross &&
+    hasDown
+  ) {
     dir = activeDirection === "across" ? "down" : "across";
   } else {
     if (dir === "across" && !hasAcross) dir = "down";
@@ -320,15 +317,13 @@ function onCellTap(r, c) {
   const num = dir === "across" ? obj.acrossNum : obj.downNum;
   if (num == null) return;
 
-  activateWord(dir, num, false);
+  // 🔑 ALWAYS activate with full highlighting
+  activateWord(dir, num, true);
 
-  const idx = activeCells.findIndex(x => x.r === r && x.c === c);
-  if (idx >= 0) activeIndex = idx;
-
-  focusActiveCell();
-
+  // Remember tap for toggle
   lastTapCell = { r, c };
 }
+
 
 function onCellFocus(r, c) {
   // keyboard/tab focus fallback (desktop/accessibility)
