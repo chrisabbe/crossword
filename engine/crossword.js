@@ -484,6 +484,6 @@ function saveProgress() {
 
 function clearHighlights() {
   document.querySelectorAll("td").forEach(td => {
-    td.classList.remove("active-word", "active-cell", "wrong");
+    td.classList.remove("active-word", "wrong");
   });
 }
