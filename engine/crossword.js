@@ -256,7 +256,13 @@ function buildClues(p) {
 /* ---------- NAVIGATION ---------- */
 
 function activateWord(dir, num, focus) {
+  // clear previous word highlight
+  document.querySelectorAll("td.active-word").forEach(td =>
+    td.classList.remove("active-word")
+  );
+
   clearHighlights();
+
 
   activeDirection = dir;
   activeClueNum = num;
@@ -484,6 +490,6 @@ function saveProgress() {
 
 function clearHighlights() {
   document.querySelectorAll("td").forEach(td => {
-    td.classList.remove("active-word", "active-cell", "wrong");
+    td.classList.remove("active-cell", "wrong");
   });
 }
