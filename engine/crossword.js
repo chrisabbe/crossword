@@ -342,9 +342,22 @@ function onCellTap(r, c) {
 
 
 function onCellFocus(r, c) {
-  // keyboard/tab focus fallback (desktop/accessibility)
-  onCellTap(r, c);
+  const obj = cellMap?.[r]?.[c];
+  if (!obj?.input) return;
+
+  let dir = activeDirection;
+
+  if (dir === "across" && obj.acrossNum == null) dir = "down";
+  if (dir === "down" && obj.downNum == null) dir = "across";
+  if (!dir) dir = obj.acrossNum != null ? "across" : "down";
+
+  const num = dir === "across" ? obj.acrossNum : obj.downNum;
+  if (num == null) return;
+
+  activateWord(dir, num, false);
+  ...
 }
+
 
 /* ---------- INPUT ---------- */
 
