@@ -20,6 +20,7 @@ let activeIndex = 0;
 
 // last tapped cell (for toggle)
 let lastTapCell = { r: null, c: null };
+let lastTapTime = 0;
 
 // prevents focus->onCellTap recursion on iOS/desktop
 let suppressFocusHandler = false;
@@ -288,8 +289,20 @@ function focusActiveCell() {
 
   cell.td.classList.add("active-cell");
 
-  // Delay focus to reduce iOS selection/paste UI
+  // Focus the real input so typing flows.
+  // preventScroll avoids iOS jumping the page.
+  suppressFocusHandler = true;
+  try {
+    cell.input.focus({ preventScroll: true });
+    // do NOT select() — selection triggers the bubble more often on iOS
+  } catch (e) {
+    // ignore
+  } finally {
+    // release guard next tick
+    setTimeout(() => { suppressFocusHandler = false; }, 0);
+  }
 }
+
 
 function onCellTap(r, c) {
   const obj = cellMap?.[r]?.[c];
@@ -299,13 +312,15 @@ function onCellTap(r, c) {
   const hasDown = obj.downNum != null;
 
   let dir = activeDirection;
+  const now = Date.now();
 
-  // Toggle only if same cell tapped again AND both directions exist
+  // 🔁 double-tap toggle logic
   if (
     lastTapCell.r === r &&
     lastTapCell.c === c &&
     hasAcross &&
-    hasDown
+    hasDown &&
+    now - lastTapTime < 350
   ) {
     dir = activeDirection === "across" ? "down" : "across";
   } else {
@@ -314,15 +329,16 @@ function onCellTap(r, c) {
     if (!dir) dir = hasAcross ? "across" : "down";
   }
 
+  lastTapTime = now;
+
   const num = dir === "across" ? obj.acrossNum : obj.downNum;
   if (num == null) return;
 
-  // 🔑 ALWAYS activate with full highlighting
   activateWord(dir, num, true);
 
-  // Remember tap for toggle
   lastTapCell = { r, c };
 }
+
 
 
 function onCellFocus(r, c) {
