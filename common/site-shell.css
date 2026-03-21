@@ -131,28 +131,31 @@ body{
   background: #ffffff;
 }
 /* ===============================
-   ABOUT BUTTON
+   ABOUT BUTTON (ENHANCED)
    =============================== */
 
 .about-btn{
   display:inline-block;
-  background:#ffffff;
-  color:#008080;
+  background:#d8c178; /* gold default */
+  color:#003f3f;
   font-weight:700;
-  font-size:14px;
-  padding:6px 12px;
+  font-size:15px;
+  padding:8px 16px;
   border-radius:999px;
   text-decoration:none;
-  border:2px solid #ffffff;
+  border:2px solid #d8c178;
+  box-shadow:0 2px 6px rgba(0,0,0,0.15);
   transition:all .2s ease;
 }
 
+/* Hover (desktop) */
 .about-btn:hover{
-  background:#d8c178;
-  color:#003f3f;
-  border-color:#d8c178;
+  background:#008080;
+  color:#ffffff;
+  border-color:#008080;
 }
 
+/* Tap (mobile) */
 .about-btn:active{
   transform:scale(0.95);
 }
