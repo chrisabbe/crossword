@@ -25,6 +25,14 @@ let lastTapTime = 0;
 // prevents focus->onCellTap recursion on iOS/desktop
 let suppressFocusHandler = false;
 
+// Fix iPhone Safari back-button restore issue
+window.addEventListener("pageshow", function (event) {
+ if (event.persisted) {
+   window.location.reload();
+ }
+});
+
+
 function showFatal(msg, err) {
  const area = document.getElementById("puzzleArea");
  if (area) {
