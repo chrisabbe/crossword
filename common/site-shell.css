@@ -130,3 +130,29 @@ body{
 .site-header {
   background: #ffffff;
 }
+/* ===============================
+   ABOUT BUTTON
+   =============================== */
+
+.about-btn{
+  display:inline-block;
+  background:#ffffff;
+  color:#008080;
+  font-weight:700;
+  font-size:14px;
+  padding:6px 12px;
+  border-radius:999px;
+  text-decoration:none;
+  border:2px solid #ffffff;
+  transition:all .2s ease;
+}
+
+.about-btn:hover{
+  background:#d8c178;
+  color:#003f3f;
+  border-color:#d8c178;
+}
+
+.about-btn:active{
+  transform:scale(0.95);
+}
