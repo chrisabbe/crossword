@@ -9,6 +9,15 @@
   font-size:26px;
   font-weight:700;
 }
+/* Day label (Trial Day / Day number) */
+.day-label{
+  text-align:center;
+  font-size:13px;
+  color:#666;
+  margin:8px 0 2px;
+  font-weight:700;
+  letter-spacing:.3px;
+}
 .subtitle{
   text-align:center;
   color:#555;
