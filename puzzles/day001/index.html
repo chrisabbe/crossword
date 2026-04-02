@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Crossword</title>
+
+<!-- Shared site shell -->
+<link rel="stylesheet" href="/crossword/common/site-shell.css">
+
+<!-- Crossword engine CSS -->
+<link rel="stylesheet" href="/crossword/engine/crossword.css">
+</head>
+
+<body>
+
+  <!-- Injected site header -->
+  <div id="site-header"></div>
+
+  <!-- Puzzle title (controlled by engine) -->
+  <div id="titleEl" class="puzzle-title">DAILY CROSSWORD</div>
+
+  <!-- ✅ DAY LABEL (EDIT THIS ONLY) -->
+  <div class="day-label">Day 1</div>
+
+  <!-- Subtitle (from JSON) -->
+  <div id="subtitleEl" class="subtitle"></div>
+
+  <div class="instructions">
+    Type letters into the boxes. Progress saves automatically. Tap a clue to highlight its word.
+  </div>
+
+  <div class="container">
+    <div class="hintbar">
+      <button class="hintbtn" onclick="checkWord()">Check Word</button>
+      <button class="hintbtn" onclick="revealLetter()">Reveal Letter</button>
+      <button class="hintbtn" onclick="revealWord()">Reveal Word</button>
+    </div>
+
+    <!-- Crossword grid injected here -->
+    <div id="puzzleArea"></div>
+
+    <div class="clues">
+      <h3>Across</h3>
+      <div id="across"></div>
+
+      <h3>Down</h3>
+      <div id="down"></div>
+    </div>
+
+    <div class="clear-wrapper">
+      <button class="clear-btn" onclick="clearGrid()">Clear My Answers</button>
+    </div>
+  </div>
+
+  <!-- Injected site footer -->
+  <div id="site-footer"></div>
+
+  <!-- INLINE PARTIAL LOADER -->
+  <script>
+    function loadPartial(targetId, url) {
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.text();
+        })
+        .then(html => {
+          const el = document.getElementById(targetId);
+          if (el) el.innerHTML = html;
+        })
+        .catch(err => console.error("Failed to load partial:", url, err));
+    }
+
+    loadPartial("site-header", "/crossword/common/header.html");
+    loadPartial("site-footer", "/crossword/common/footer.html");
+
+    // Error handler
+    window.addEventListener("error", (e) => {
+      const area = document.getElementById("puzzleArea");
+      if (!area) return;
+      area.innerHTML =
+        "<div style='text-align:center;color:#b00000;font-weight:700;margin:24px 0;'>" +
+        "Crossword failed to load (JS error). Open console for details." +
+        "</div>";
+      console.error("Crossword page error:", e.error || e.message);
+    });
+  </script>
+
+  <!-- Crossword engine -->
+  <script src="/crossword/engine/crossword.js"></script>
+
+</body>
+</html>
